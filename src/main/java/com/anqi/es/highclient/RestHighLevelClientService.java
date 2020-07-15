@@ -22,6 +22,7 @@ import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
@@ -46,13 +47,14 @@ public class RestHighLevelClientService {
 
     /**
      * 创建索引
+     *
      * @param indexName
      * @param settings
      * @param mapping
      * @return
      * @throws IOException
      */
-    public CreateIndexResponse createIndex(String indexName, String settings, String mapping) throws IOException{
+    public CreateIndexResponse createIndex(String indexName, String settings, String mapping) throws IOException {
         CreateIndexRequest request = new CreateIndexRequest(indexName);
         if (null != settings && !"".equals(settings)) {
             request.settings(settings, XContentType.JSON);
@@ -65,11 +67,12 @@ public class RestHighLevelClientService {
 
     /**
      * 删除索引
+     *
      * @param indexNames
      * @return
      * @throws IOException
      */
-    public AcknowledgedResponse deleteIndex(String ... indexNames) throws IOException{
+    public AcknowledgedResponse deleteIndex(String... indexNames) throws IOException {
         DeleteIndexRequest request = new DeleteIndexRequest(indexNames);
         return client.indices().delete(request, RequestOptions.DEFAULT);
     }
@@ -77,6 +80,7 @@ public class RestHighLevelClientService {
 
     /**
      * 判断 index 是否存在
+     *
      * @param indexName
      * @return
      * @throws IOException
@@ -88,24 +92,26 @@ public class RestHighLevelClientService {
 
     /**
      * 根据 id 删除指定索引中的文档
+     *
      * @param indexName
      * @param id
      * @return
      * @throws IOException
      */
-    public DeleteResponse deleteDoc(String indexName, String id) throws IOException{
+    public DeleteResponse deleteDoc(String indexName, String id) throws IOException {
         DeleteRequest request = new DeleteRequest(indexName, id);
         return client.delete(request, RequestOptions.DEFAULT);
     }
 
     /**
      * 根据 id 更新指定索引中的文档
+     *
      * @param indexName
      * @param id
      * @return
      * @throws IOException
      */
-    public UpdateResponse updateDoc(String indexName, String id, String updateJson) throws IOException{
+    public UpdateResponse updateDoc(String indexName, String id, String updateJson) throws IOException {
         UpdateRequest request = new UpdateRequest(indexName, id);
         request.doc(XContentType.JSON, updateJson);
         return client.update(request, RequestOptions.DEFAULT);
@@ -113,12 +119,13 @@ public class RestHighLevelClientService {
 
     /**
      * 根据 id 更新指定索引中的文档
+     *
      * @param indexName
      * @param id
      * @return
      * @throws IOException
      */
-    public UpdateResponse updateDoc(String indexName, String id, Map<String,Object> updateMap) throws IOException{
+    public UpdateResponse updateDoc(String indexName, String id, Map<String, Object> updateMap) throws IOException {
         UpdateRequest request = new UpdateRequest(indexName, id);
         request.doc(updateMap);
         return client.update(request, RequestOptions.DEFAULT);
@@ -126,12 +133,13 @@ public class RestHighLevelClientService {
 
     /**
      * 根据某字段的 k-v 更新索引中的文档
+     *
      * @param fieldName
      * @param value
      * @param indexName
      * @throws IOException
      */
-    public void updateByQuery(String fieldName, String value, String ... indexName) throws IOException {
+    public void updateByQuery(String fieldName, String value, String... indexName) throws IOException {
         UpdateByQueryRequest request = new UpdateByQueryRequest(indexName);
         //单次处理文档数量
         request.setBatchSize(100)
@@ -142,13 +150,14 @@ public class RestHighLevelClientService {
 
     /**
      * 添加文档 手动指定id
+     *
      * @param indexName
      * @param id
      * @param source
      * @return
      * @throws IOException
      */
-    public IndexResponse addDoc(String indexName, String id, String source) throws IOException{
+    public IndexResponse addDoc(String indexName, String id, String source) throws IOException {
         IndexRequest request = new IndexRequest(indexName);
         if (null != id) {
             request.id(id);
@@ -159,17 +168,19 @@ public class RestHighLevelClientService {
 
     /**
      * 添加文档 使用自动id
+     *
      * @param indexName
      * @param source
      * @return
      * @throws IOException
      */
-    public IndexResponse addDoc(String indexName, String source) throws IOException{
+    public IndexResponse addDoc(String indexName, String source) throws IOException {
         return addDoc(indexName, null, source);
     }
 
     /**
      * 简单模糊匹配 默认分页为 0,10
+     *
      * @param field
      * @param key
      * @param page
@@ -178,7 +189,7 @@ public class RestHighLevelClientService {
      * @return
      * @throws IOException
      */
-    public SearchResponse search(String field, String key, int page, int size, String ... indexNames) throws IOException{
+    public SearchResponse search(String field, String key, int page, int size, String... indexNames) throws IOException {
         SearchRequest request = new SearchRequest(indexNames);
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.query(new MatchQueryBuilder(field, key))
@@ -190,6 +201,7 @@ public class RestHighLevelClientService {
 
     /**
      * term 查询 精准匹配
+     *
      * @param field
      * @param key
      * @param page
@@ -198,7 +210,7 @@ public class RestHighLevelClientService {
      * @return
      * @throws IOException
      */
-    public SearchResponse termSearch(String field, String key, int page, int size, String ... indexNames) throws IOException{
+    public SearchResponse termSearch(String field, String key, int page, int size, String... indexNames) throws IOException {
         SearchRequest request = new SearchRequest(indexNames);
         SearchSourceBuilder builder = new SearchSourceBuilder();
         builder.query(QueryBuilders.termsQuery(field, key))
@@ -208,17 +220,35 @@ public class RestHighLevelClientService {
         return client.search(request, RequestOptions.DEFAULT);
     }
 
+    public SearchResponse multiSearch(Map<String, Object> termsMap, Map<String, Object> matchMap, int page, int size, String... indexNames) throws IOException {
+        SearchRequest request = new SearchRequest(indexNames);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+        termsMap.forEach((key, value) -> {
+            queryBuilder.must(QueryBuilders.termsQuery(key, value));
+        });
+        matchMap.forEach((key, value) -> {
+            queryBuilder.must(QueryBuilders.matchQuery(key, value));
+        });
+        searchSourceBuilder.query(queryBuilder)
+                .from(page)
+                .size(size);
+        request.source(searchSourceBuilder);
+        return client.search(request, RequestOptions.DEFAULT);
+    }
+
 
     /**
      * 批量导入
+     *
      * @param indexName
-     * @param isAutoId 使用自动id 还是使用传入对象的id
+     * @param isAutoId  使用自动id 还是使用传入对象的id
      * @param source
      * @return
      * @throws IOException
      */
-    public BulkResponse importAll(String indexName, boolean isAutoId,  String  source) throws IOException{
-        if (0 == source.length()){
+    public BulkResponse importAll(String indexName, boolean isAutoId, String source) throws IOException {
+        if (0 == source.length()) {
             //todo 抛出异常 导入数据为空
         }
         BulkRequest request = new BulkRequest();
