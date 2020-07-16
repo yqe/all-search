@@ -1,5 +1,7 @@
 package com.anqi.es.controller;
 
+import com.alibaba.fastjson.JSON;
+import com.anqi.es.dto.SearchDTO;
 import com.anqi.es.entity.Cloth;
 import com.anqi.es.highclient.RestHighLevelClientService;
 import lombok.extern.slf4j.Slf4j;
@@ -8,14 +10,10 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author anqi
@@ -39,8 +37,16 @@ public class EsController {
         return response.toString();
     }
 
+    @PostMapping("/save")
+    public String save(@RequestBody Cloth cloth) throws IOException {
+        String source = JSON.toJSONString(cloth);
+        System.out.println(source);
+        IndexResponse response = service.addDoc("idx_clouthing", source);
+        return response.toString();
+    }
+
     @PostMapping("/search")
-    public String search(String productName) throws IOException {
+    public String search(@RequestParam("file") String productName) throws IOException {
         SearchResponse search = service.search("name", productName, 0, 10, "idx_clouthing");
         System.out.println("搜索到 " + search.getHits().getTotalHits() + " 条数据.");
         SearchHits hits = search.getHits();
@@ -50,13 +56,10 @@ public class EsController {
         return "成功";
     }
 
-    @GetMapping("/multiSearch")
-    public String multiSearch() throws IOException {
-        Map<String, Object> termsMap = new HashMap<>();
-        termsMap.put("price", "700");
-        Map<String, Object> matchMap = new HashMap<>();
-        matchMap.put("name", "阿迪");
-        SearchResponse search = service.multiSearch(termsMap, matchMap, 0, 10, "idx_clouthing");
+    @PostMapping("/multiSearch")
+    public String multiSearch(@RequestBody SearchDTO searchDTO) throws IOException {
+        service.multiSearch(searchDTO);
+        SearchResponse search = service.multiSearch(searchDTO);
         System.out.println("搜索到 " + search.getHits().getTotalHits() + " 条数据.");
         SearchHits hits = search.getHits();
         for (SearchHit hit : hits) {

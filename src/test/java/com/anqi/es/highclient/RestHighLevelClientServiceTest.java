@@ -91,7 +91,7 @@ public class RestHighLevelClientServiceTest {
     @Test
     public void addDoc() throws IOException {
         SnowflakeIdWorker idWorker = new SnowflakeIdWorker(0, 0);
-        Cloth cloth = new Cloth(idWorker.nextId()+"","新版日系毛衣", "潮流前线等你来Pick!", 50, 199.99, new Date());
+        Cloth cloth = new Cloth(idWorker.nextId()+"","新版日系毛衣", "潮流前线等你来Pick!", 50, 199.99, new Date().toString());
         String source = JSON.toJSONString(cloth);
         IndexResponse response = service.addDoc("idx_cloth", source);
         System.out.println(response.status());

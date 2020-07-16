@@ -3,6 +3,12 @@ package com.anqi.es.highclient;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.anqi.es.common.Constant;
+import com.anqi.es.dto.RangeDTO;
+import com.anqi.es.dto.SearchDTO;
+import com.anqi.es.dto.SearchInfoDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.lucene.index.Fields;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -28,22 +34,30 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-//DeleteRequest GetRequest UpdateRequest 都是根据 id 操作文档
 
 /**
  * @author anqi
  */
+@Slf4j
 @Service
 public class RestHighLevelClientService {
 
     @Autowired
     private RestHighLevelClient client;
+
+    private List<String> rangeList = new ArrayList<>();
 
     /**
      * 创建索引
@@ -220,23 +234,72 @@ public class RestHighLevelClientService {
         return client.search(request, RequestOptions.DEFAULT);
     }
 
-    public SearchResponse multiSearch(Map<String, Object> termsMap, Map<String, Object> matchMap, int page, int size, String... indexNames) throws IOException {
+    /**
+     * @param termsMap
+     * @param matchMap
+     * @param page
+     * @param size
+     * @param indexNames
+     * @return
+     * @throws IOException
+     */
+    private SearchResponse multiSearch(Map<String, Object> matchMap, List<RangeDTO> rangeDTOList, int page, int size, String... indexNames) throws IOException {
         SearchRequest request = new SearchRequest(indexNames);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-        termsMap.forEach((key, value) -> {
-            queryBuilder.must(QueryBuilders.termsQuery(key, value));
+        rangeDTOList.forEach(r -> {
+            queryBuilder.must(QueryBuilders.rangeQuery(r.getName())
+                    .from(r.getStart())
+                    .to(r.getEnd()));
         });
         matchMap.forEach((key, value) -> {
             queryBuilder.must(QueryBuilders.matchQuery(key, value));
         });
+
         searchSourceBuilder.query(queryBuilder)
-                .from(page)
+                .from((page - 1) * size)
                 .size(size);
         request.source(searchSourceBuilder);
         return client.search(request, RequestOptions.DEFAULT);
     }
 
+    public SearchResponse multiSearch(SearchDTO searchDTO) throws IOException {
+        SearchInfoDTO searchInfoDTO = new SearchInfoDTO();
+        BeanUtils.copyProperties(searchDTO, searchInfoDTO);
+        int page = searchDTO.getPage() == null ? Constant.defaultPage : searchDTO.getPage();
+        int pageSize = searchDTO.getSize() == null ? Constant.defaultPageSize : searchDTO.getSize();
+        //校验空值字段
+        Map<String, Object> matchMap = new HashMap<>(8);
+        Field[] fields = searchDTO.getClass().getDeclaredFields();
+        for (Field field : fields) {
+            try {
+                field.setAccessible(true);
+                if (field.get(searchDTO) != null && !rangeList.contains(field.getName())) {
+                    matchMap.put(field.getName(), field.get(searchDTO));
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        //范围查询
+        List<RangeDTO> rangeDTOList = getRangeList(searchInfoDTO);
+        return multiSearch(matchMap, rangeDTOList, page, pageSize, "idx_clouthing");
+    }
+
+    /**
+     * 整合范围列表
+     * @param searchInfoDTO
+     * @return
+     */
+    private List<RangeDTO> getRangeList(SearchInfoDTO searchInfoDTO) {
+        List<RangeDTO> rangeDTOList = new ArrayList<>();
+        RangeDTO timeRange = RangeDTO.builder().name("date")
+                .start(searchInfoDTO.getStartTime())
+                .end(searchInfoDTO.getEndTime())
+                .build();
+        rangeDTOList.add(timeRange);
+        return rangeDTOList;
+    }
 
     /**
      * 批量导入
@@ -266,5 +329,11 @@ public class RestHighLevelClientService {
             }
         }
         return client.bulk(request, RequestOptions.DEFAULT);
+    }
+
+    @PostConstruct
+    public void init() {
+        rangeList.add("startTime");
+        rangeList.add("endTime");
     }
 }
