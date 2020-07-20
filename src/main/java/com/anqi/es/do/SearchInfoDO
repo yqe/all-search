@@ -1,8 +1,6 @@
 /**
  * Copyright 2020 meituan.com Inc. All Rights Reserved.
  */
-package com.anqi.es.dto;
-
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -17,13 +15,13 @@ import java.util.List;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class SearchInfoDTO {
+public class SearchInfoDO {
     private Integer type;
-    private List<Integer> accessPoints;
-    private List<String> cvIds;
-    private List<Long> bizIds;
-    private List<Long> userIds;
-    private List<Long> shopIds;
+    private List<Integer> accessPoint;
+    private List<String> cvId;
+    private List<Long> bizId;
+    private List<Long> userId;
+    private List<Long> shopId;
     private String content;
     private Long startTime;
     private Long endTime;

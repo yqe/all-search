@@ -14,7 +14,8 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class SearchDTO extends SearchInfoDTO {
+public class SearchDTO{
     private Integer page;
     private Integer size;
+    private SearchInfoDTO searchInfoDTO;
 }

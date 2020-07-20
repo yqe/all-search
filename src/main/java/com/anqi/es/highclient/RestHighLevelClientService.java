@@ -4,11 +4,11 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.anqi.es.common.Constant;
-import com.anqi.es.dto.RangeDTO;
 import com.anqi.es.dto.SearchDTO;
+import com.anqi.es.dto.SearchInfoDO;
 import com.anqi.es.dto.SearchInfoDTO;
+import com.anqi.es.enums.IndexType;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.lucene.index.Fields;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -34,9 +34,9 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -234,71 +234,125 @@ public class RestHighLevelClientService {
         return client.search(request, RequestOptions.DEFAULT);
     }
 
-    /**
-     * @param termsMap
-     * @param matchMap
-     * @param page
-     * @param size
-     * @param indexNames
-     * @return
-     * @throws IOException
-     */
-    private SearchResponse multiSearch(Map<String, Object> matchMap, List<RangeDTO> rangeDTOList, int page, int size, String... indexNames) throws IOException {
+//    /**
+//     * @param matchMap
+//     * @param page
+//     * @param size
+//     * @param indexNames
+//     * @return
+//     * @throws IOException
+//     */
+//    private SearchResponse multiSearch(Map<String, Object> matchMap, List<RangeDTO> rangeDTOList, int page, int size, String... indexNames) throws IOException {
+//        SearchRequest request = new SearchRequest(indexNames);
+//        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+//        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+//        rangeDTOList.forEach(r -> {
+//            queryBuilder.must(QueryBuilders.rangeQuery(r.getName())
+//                    .from(r.getStart())
+//                    .to(r.getEnd()));
+//        });
+//        matchMap.forEach((key, value) -> {
+//            queryBuilder.must(QueryBuilders.matchQuery(key, value));
+//        });
+//
+//        searchSourceBuilder.query(queryBuilder)
+//                .from((page - 1) * size)
+//                .size(size);
+//        request.source(searchSourceBuilder);
+//        return client.search(request, RequestOptions.DEFAULT);
+//    }
+
+    public SearchResponse multiSearch(SearchDTO searchDTO) throws IOException {
+        SearchInfoDTO searchInfoDTO = searchDTO.getSearchInfoDTO();
+        int size = searchDTO.getSize() == null ? Constant.defaultPageSize : searchDTO.getSize();
+        int page = searchDTO.getPage() == null ? Constant.defaultPage : (searchDTO.getPage() - 1) * searchDTO.getSize();
+        //todo 把异常抛出来，提示需要输入查询内容
+        if (searchInfoDTO == null) {
+            return null;
+        }
+        String indexNames = IndexType.of(Constant.defaultType).getName();
+        if (searchInfoDTO.getType() == null) {
+            List<Integer> accessPoints = searchInfoDTO.getAccessPoints();
+            if (!CollectionUtils.isEmpty(accessPoints)) {
+                indexNames = getIndexByAccessPoint(accessPoints.get(0));
+            }
+        } else {
+            indexNames = IndexType.of(searchInfoDTO.getType()).getName();
+        }
+
         SearchRequest request = new SearchRequest(indexNames);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
-        rangeDTOList.forEach(r -> {
-            queryBuilder.must(QueryBuilders.rangeQuery(r.getName())
-                    .from(r.getStart())
-                    .to(r.getEnd()));
-        });
-        matchMap.forEach((key, value) -> {
-            queryBuilder.must(QueryBuilders.matchQuery(key, value));
-        });
-
+        BoolQueryBuilder queryBuilder;
+        if (!CollectionUtils.isEmpty(searchInfoDTO.getCvIds())) {
+            queryBuilder = searchByCvIds(searchInfoDTO.getCvIds());
+        } else {
+            queryBuilder = multiSearchByInfo(searchInfoDTO);
+        }
         searchSourceBuilder.query(queryBuilder)
-                .from((page - 1) * size)
+                .from(page)
                 .size(size);
         request.source(searchSourceBuilder);
         return client.search(request, RequestOptions.DEFAULT);
     }
 
-    public SearchResponse multiSearch(SearchDTO searchDTO) throws IOException {
-        SearchInfoDTO searchInfoDTO = new SearchInfoDTO();
-        BeanUtils.copyProperties(searchDTO, searchInfoDTO);
-        int page = searchDTO.getPage() == null ? Constant.defaultPage : searchDTO.getPage();
-        int pageSize = searchDTO.getSize() == null ? Constant.defaultPageSize : searchDTO.getSize();
-        //校验空值字段
+
+    public BoolQueryBuilder multiSearchByInfo(SearchInfoDO searchInfoDO) throws IOException {
+        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
+//        //todo NULL值校验
+//        searchInfoDTO.getBizIds().forEach(b -> {
+//            queryBuilder.should(QueryBuilders.matchQuery("bizId", b));
+//        });
+//        searchInfoDTO.getUserIds().forEach(u -> {
+//            queryBuilder.should(QueryBuilders.matchQuery("userId", u));
+//        });
+//        searchInfoDTO.getShopIds().forEach(s -> {
+//            queryBuilder.should(QueryBuilders.matchQuery("shopId", s));
+//        });
+//        queryBuilder.must(QueryBuilders.matchQuery("accessPoint", searchInfoDTO.getAccessPoint()));
+//        queryBuilder.must(QueryBuilders.matchQuery("content", searchInfoDTO.getContent()));
+        Map<String, Object> matchMap = getSearchParam(searchInfoDO);
+        matchMap.forEach((key, value) -> {
+            if (value instanceof List) {
+                List<Object> valueList = (List<Object>) value;
+                BoolQueryBuilder tmpQueryBuilder = QueryBuilders.boolQuery();
+                valueList.forEach(v -> {
+                    tmpQueryBuilder.should(QueryBuilders.matchQuery(key, value));
+                });
+                queryBuilder.must(tmpQueryBuilder);
+            } else {
+                queryBuilder.must(QueryBuilders.matchQuery(key, value));
+            }
+        });
+        queryBuilder.must(QueryBuilders.rangeQuery("date")
+                .from(searchInfoDTO.getStartTime())
+                .to(searchInfoDTO.getEndTime()));
+        return queryBuilder;
+    }
+
+    public BoolQueryBuilder searchByCvIds(List<String> cvIds) {
+        return null;
+    }
+
+    //todo 根据接入点获取类型（文字图片视频）
+    private String getIndexByAccessPoint(Integer accessPoint) {
+        return "";
+    }
+
+    private Map<String, Object> getSearchParam(SearchInfoDO searchInfoDO) {
         Map<String, Object> matchMap = new HashMap<>(8);
-        Field[] fields = searchDTO.getClass().getDeclaredFields();
+        Field[] fields = searchInfoDO.getClass().getDeclaredFields();
         for (Field field : fields) {
             try {
                 field.setAccessible(true);
-                if (field.get(searchDTO) != null && !rangeList.contains(field.getName())) {
-                    matchMap.put(field.getName(), field.get(searchDTO));
+                if (field.get(searchInfoDO) != null && !rangeList.contains(field.getName())) {
+                    matchMap.put(field.getName(), field.get(searchInfoDO));
                 }
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
-        //范围查询
-        List<RangeDTO> rangeDTOList = getRangeList(searchInfoDTO);
-        return multiSearch(matchMap, rangeDTOList, page, pageSize, "idx_clouthing");
-    }
-
-    /**
-     * 整合范围列表
-     * @param searchInfoDTO
-     * @return
-     */
-    private List<RangeDTO> getRangeList(SearchInfoDTO searchInfoDTO) {
-        List<RangeDTO> rangeDTOList = new ArrayList<>();
-        RangeDTO timeRange = RangeDTO.builder().name("date")
-                .start(searchInfoDTO.getStartTime())
-                .end(searchInfoDTO.getEndTime())
-                .build();
-        rangeDTOList.add(timeRange);
-        return rangeDTOList;
+        log.info("matchMap:{}", matchMap);
+        return matchMap;
     }
 
     /**

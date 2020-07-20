@@ -3,10 +3,12 @@ package com.anqi.es.controller;
 import com.alibaba.fastjson.JSON;
 import com.anqi.es.dto.SearchDTO;
 import com.anqi.es.entity.Cloth;
+import com.anqi.es.entity.CreditInfo;
 import com.anqi.es.highclient.RestHighLevelClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,29 +27,24 @@ public class EsController {
     @Autowired
     RestHighLevelClientService service;
 
-    @GetMapping("/es")
-    public String testHigh() throws IOException {
-        String source = "{\n" +
-                "  \"name\" : \"阿迪王运动鞋\",\n" +
-                "  \"price\" : 100,\n" +
-                "  \"num\" : 500,\n" +
-                "  \"date\" : \"2019-08-28\"\n" +
-                "}";
-        IndexResponse response = service.addDoc("idx_clouthing", source);
-        return response.toString();
+
+    @GetMapping("/delete")
+    public Boolean testDelete(String index) throws IOException {
+        AcknowledgedResponse response = service.deleteIndex(index);
+        return response.isAcknowledged();
     }
 
     @PostMapping("/save")
-    public String save(@RequestBody Cloth cloth) throws IOException {
-        String source = JSON.toJSONString(cloth);
+    public String save(@RequestBody CreditInfo creditInfo) throws IOException {
+        String source = JSON.toJSONString(creditInfo);
         System.out.println(source);
-        IndexResponse response = service.addDoc("idx_clouthing", source);
+        IndexResponse response = service.addDoc("text_index", source);
         return response.toString();
     }
 
     @PostMapping("/search")
-    public String search(@RequestParam("file") String productName) throws IOException {
-        SearchResponse search = service.search("name", productName, 0, 10, "idx_clouthing");
+    public String search(@RequestParam("content") String content) throws IOException {
+        SearchResponse search = service.search("name", content, 0, 10, "text_index");
         System.out.println("搜索到 " + search.getHits().getTotalHits() + " 条数据.");
         SearchHits hits = search.getHits();
         for (SearchHit hit : hits) {

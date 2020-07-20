@@ -9,6 +9,10 @@ package com.anqi.es.common;
  */
 public final class Constant {
     /**
+     * 默认索引
+     */
+    public static int defaultType = 1;
+    /**
      * 默认页数
      */
     public static int defaultPage = 0;
