@@ -3,9 +3,9 @@
  */
 package com.anqi.es.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
@@ -15,9 +15,9 @@ import java.util.List;
  * @version 1.0 2020/7/16
  */
 @Data
-@SuperBuilder
+@Builder
 @NoArgsConstructor
-public class SearchInfoDTO {
+public class SearchInfoDTO{
     private Integer type;
     private List<Integer> accessPoints;
     private List<String> cvIds;

@@ -1,9 +1,9 @@
-/**
+package com.anqi.es.tracerdo; /**
  * Copyright 2020 meituan.com Inc. All Rights Reserved.
  */
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ import java.util.List;
  * @version 1.0 2020/7/16
  */
 @Data
-@SuperBuilder
+@Builder
 @NoArgsConstructor
 public class SearchInfoDO {
     private Integer type;

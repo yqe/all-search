@@ -2,7 +2,6 @@ package com.anqi.es.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.anqi.es.dto.SearchDTO;
-import com.anqi.es.entity.Cloth;
 import com.anqi.es.entity.CreditInfo;
 import com.anqi.es.highclient.RestHighLevelClientService;
 import lombok.extern.slf4j.Slf4j;

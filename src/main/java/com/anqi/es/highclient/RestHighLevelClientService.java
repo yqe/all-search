@@ -5,9 +5,10 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.anqi.es.common.Constant;
 import com.anqi.es.dto.SearchDTO;
-import com.anqi.es.dto.SearchInfoDO;
 import com.anqi.es.dto.SearchInfoDTO;
 import com.anqi.es.enums.IndexType;
+import com.anqi.es.tracerdo.SearchInfoDO;
+import com.anqi.es.util.ConvertUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -279,14 +280,14 @@ public class RestHighLevelClientService {
         } else {
             indexNames = IndexType.of(searchInfoDTO.getType()).getName();
         }
-
+        SearchInfoDO searchInfoDO = ConvertUtils.convertSearchInfoDTO(searchInfoDTO);
         SearchRequest request = new SearchRequest(indexNames);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder queryBuilder;
         if (!CollectionUtils.isEmpty(searchInfoDTO.getCvIds())) {
             queryBuilder = searchByCvIds(searchInfoDTO.getCvIds());
         } else {
-            queryBuilder = multiSearchByInfo(searchInfoDTO);
+            queryBuilder = multiSearchByInfo(searchInfoDO);
         }
         searchSourceBuilder.query(queryBuilder)
                 .from(page)
@@ -324,8 +325,8 @@ public class RestHighLevelClientService {
             }
         });
         queryBuilder.must(QueryBuilders.rangeQuery("date")
-                .from(searchInfoDTO.getStartTime())
-                .to(searchInfoDTO.getEndTime()));
+                .from(searchInfoDO.getStartTime())
+                .to(searchInfoDO.getEndTime()));
         return queryBuilder;
     }
 
