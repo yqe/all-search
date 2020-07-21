@@ -1,6 +1,8 @@
 package com.anqi.es.controller;
 
 import com.alibaba.fastjson.JSON;
+import com.anqi.es.dto.CreditInfo;
+import com.anqi.es.dto.CreditInfoDTO;
 import com.anqi.es.dto.SearchDTO;
 import com.anqi.es.entity.Cloth;
 import com.anqi.es.highclient.RestHighLevelClientService;
@@ -9,6 +11,7 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,10 +41,13 @@ public class EsController {
     }
 
     @PostMapping("/save")
-    public String save(@RequestBody Cloth cloth) throws IOException {
-        String source = JSON.toJSONString(cloth);
+    public String save(@RequestBody CreditInfoDTO creditInfoDTO) throws IOException {
+        CreditInfo creditInfo = CreditInfo.builder().build();
+        BeanUtils.copyProperties(creditInfoDTO, creditInfo);
+        BeanUtils.copyProperties(creditInfoDTO, creditInfo);
+        String source = JSON.toJSONString(creditInfo);
         System.out.println(source);
-        IndexResponse response = service.addDoc("idx_clouthing", source);
+        IndexResponse response = service.addDoc("idx_credit", String.valueOf(creditInfoDTO.getCvId()), source);
         return response.toString();
     }
 
