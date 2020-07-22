@@ -26,7 +26,6 @@ import java.util.Date;
 //有RunWith才会有ioc容器
 @SpringBootTest(classes = DemoEsApplication.class)
 @RunWith(SpringRunner.class)
-@ComponentScan("com.anqi.es")
 public class RestHighLevelClientServiceTest {
 
     @Autowired

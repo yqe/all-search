@@ -16,7 +16,6 @@ import java.util.List;
  */
 @Data
 @Builder
-@NoArgsConstructor
 public class SearchInfoDTO{
     private Integer type;
     private List<Integer> accessPoints;

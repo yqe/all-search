@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * @author anqi
  */
-@SpringBootApplication(scanBasePackages = "com.anqi.es")
+@SpringBootApplication()
 public class DemoEsApplication {
     public static void main(String[] args) {
         SpringApplication.run(DemoEsApplication.class, args);

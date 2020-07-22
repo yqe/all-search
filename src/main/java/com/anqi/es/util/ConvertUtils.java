@@ -4,8 +4,8 @@
 package com.anqi.es.util;
 
 
+import com.anqi.es.bo.SearchInfoBO;
 import com.anqi.es.dto.SearchInfoDTO;
-import com.anqi.es.tracerdo.SearchInfoDO;
 import org.springframework.beans.BeanUtils;
 
 /**
@@ -13,8 +13,8 @@ import org.springframework.beans.BeanUtils;
  * @version 1.0 2020/7/17
  */
 public class ConvertUtils {
-    public static SearchInfoDO convertSearchInfoDTO(SearchInfoDTO searchInfoDTO) {
-        SearchInfoDO searchInfoDO = SearchInfoDO.builder()
+    public static SearchInfoBO convertSearchInfoDTO(SearchInfoDTO searchInfoDTO) {
+        SearchInfoBO searchInfoDO = SearchInfoBO.builder()
                 .accessPoint(searchInfoDTO.getAccessPoints())
                 .bizId(searchInfoDTO.getBizIds())
                 .cvId(searchInfoDTO.getCvIds())

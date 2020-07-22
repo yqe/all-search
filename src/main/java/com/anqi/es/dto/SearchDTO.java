@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @Builder
-@NoArgsConstructor
 public class SearchDTO{
     private Integer page;
     private Integer size;

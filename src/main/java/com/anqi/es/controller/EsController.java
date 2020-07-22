@@ -19,13 +19,17 @@ import java.io.IOException;
 /**
  * @author anqi
  */
-@Slf4j
+//@Slf4j
 @RestController
 public class EsController {
 
     @Autowired
     RestHighLevelClientService service;
 
+    @GetMapping("/test")
+    public String test() throws IOException {
+        return "bbbbb";
+    }
 
     @GetMapping("/delete")
     public Boolean testDelete(String index) throws IOException {
@@ -43,7 +47,7 @@ public class EsController {
 
     @PostMapping("/search")
     public String search(@RequestParam("content") String content) throws IOException {
-        SearchResponse search = service.search("name", content, 0, 10, "text_index");
+        SearchResponse search = service.search("content", content, 0, 1, "idx_credit");
         System.out.println("搜索到 " + search.getHits().getTotalHits() + " 条数据.");
         SearchHits hits = search.getHits();
         for (SearchHit hit : hits) {

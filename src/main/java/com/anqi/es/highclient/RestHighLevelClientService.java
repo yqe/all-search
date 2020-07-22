@@ -3,11 +3,11 @@ package com.anqi.es.highclient;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.anqi.es.bo.SearchInfoBO;
 import com.anqi.es.common.Constant;
 import com.anqi.es.dto.SearchDTO;
 import com.anqi.es.dto.SearchInfoDTO;
 import com.anqi.es.enums.IndexType;
-import com.anqi.es.tracerdo.SearchInfoDO;
 import com.anqi.es.util.ConvertUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
@@ -280,7 +280,7 @@ public class RestHighLevelClientService {
         } else {
             indexNames = IndexType.of(searchInfoDTO.getType()).getName();
         }
-        SearchInfoDO searchInfoDO = ConvertUtils.convertSearchInfoDTO(searchInfoDTO);
+        SearchInfoBO searchInfoDO = ConvertUtils.convertSearchInfoDTO(searchInfoDTO);
         SearchRequest request = new SearchRequest(indexNames);
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder queryBuilder;
@@ -297,7 +297,7 @@ public class RestHighLevelClientService {
     }
 
 
-    public BoolQueryBuilder multiSearchByInfo(SearchInfoDO searchInfoDO) throws IOException {
+    public BoolQueryBuilder multiSearchByInfo(SearchInfoBO searchInfoBO) throws IOException {
         BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery();
 //        //todo NULL值校验
 //        searchInfoDTO.getBizIds().forEach(b -> {
@@ -311,7 +311,7 @@ public class RestHighLevelClientService {
 //        });
 //        queryBuilder.must(QueryBuilders.matchQuery("accessPoint", searchInfoDTO.getAccessPoint()));
 //        queryBuilder.must(QueryBuilders.matchQuery("content", searchInfoDTO.getContent()));
-        Map<String, Object> matchMap = getSearchParam(searchInfoDO);
+        Map<String, Object> matchMap = getSearchParam(searchInfoBO);
         matchMap.forEach((key, value) -> {
             if (value instanceof List) {
                 List<Object> valueList = (List<Object>) value;
@@ -325,8 +325,8 @@ public class RestHighLevelClientService {
             }
         });
         queryBuilder.must(QueryBuilders.rangeQuery("date")
-                .from(searchInfoDO.getStartTime())
-                .to(searchInfoDO.getEndTime()));
+                .from(searchInfoBO.getStartTime())
+                .to(searchInfoBO.getEndTime()));
         return queryBuilder;
     }
 
@@ -339,14 +339,14 @@ public class RestHighLevelClientService {
         return "";
     }
 
-    private Map<String, Object> getSearchParam(SearchInfoDO searchInfoDO) {
-        Map<String, Object> matchMap = new HashMap<>(8);
-        Field[] fields = searchInfoDO.getClass().getDeclaredFields();
+    private Map<String, Object> getSearchParam(SearchInfoBO searchInfoBO) {
+        Map<String, Object> matchMap = new HashMap<>(8, 1);
+        Field[] fields = searchInfoBO.getClass().getDeclaredFields();
         for (Field field : fields) {
             try {
                 field.setAccessible(true);
-                if (field.get(searchInfoDO) != null && !rangeList.contains(field.getName())) {
-                    matchMap.put(field.getName(), field.get(searchInfoDO));
+                if (field.get(searchInfoBO) != null && !rangeList.contains(field.getName())) {
+                    matchMap.put(field.getName(), field.get(searchInfoBO));
                 }
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
